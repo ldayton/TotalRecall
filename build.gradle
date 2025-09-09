@@ -18,6 +18,7 @@ ext {
     ]
     caffeineVersion = '3.2.+'
     googleJavaFormatVersion = '1.24.0'
+    gsonVersion = '2.11.+'
     guiceVersion = '7.0.+'
     jnaVersion = '5.17.+'
     junitJupiterVersion = '5.10.+'
@@ -55,6 +56,7 @@ dependencies {
     implementation "ch.qos.logback:logback-classic:${logbackVersion}"
     implementation "com.google.inject:guice:${guiceVersion}"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+    implementation "com.google.code.gson:gson:${gsonVersion}"
     
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
