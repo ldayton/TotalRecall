@@ -63,17 +63,9 @@ class FmodAudioEngineTest {
 
         loadingManager =
                 new FmodAudioLoadingManager(
-                        systemManager.getFmodLibrary(),
-                        systemManager.getSystem(),
-                        stateManager,
-                        lifecycleManager);
-        playbackManager =
-                new FmodPlaybackManager(systemManager.getFmodLibrary(), systemManager.getSystem());
-        listenerManager =
-                new FmodListenerManager(
-                        systemManager.getFmodLibrary(),
-                        systemManager.getSystem(),
-                        PROGRESS_INTERVAL_MS);
+                        systemManager.getSystem(), stateManager, lifecycleManager);
+        playbackManager = new FmodPlaybackManager(systemManager.getSystem());
+        listenerManager = new FmodListenerManager(systemManager.getSystem(), PROGRESS_INTERVAL_MS);
 
         // Create the engine with real components
         engine =

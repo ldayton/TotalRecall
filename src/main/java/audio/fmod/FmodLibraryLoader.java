@@ -1,9 +1,6 @@
 package audio.fmod;
 
 import audio.exceptions.AudioEngineException;
-import com.sun.jna.Library;
-import com.sun.jna.Native;
-import com.sun.jna.NativeLibrary;
 import java.io.File;
 import java.util.Arrays;
 import lombok.NonNull;
@@ -103,21 +100,20 @@ public class FmodLibraryLoader {
     }
 
     /**
-     * Loads the audio library using configured loading mode and library type.
-     *
-     * @param interfaceClass The JNA interface class to load
-     * @return The loaded library instance
-     * @throws AudioEngineException if library cannot be loaded
+     * Loads the native FMOD library into the process using System.load/System.loadLibrary based on
+     * configured mode.
      */
-    public <T extends Library> T loadAudioLibrary(@NonNull Class<T> interfaceClass) {
+    public void loadNativeLibrary() {
         synchronized (loadLock) {
             try {
                 LibraryLoadingMode mode = getLoadingMode();
                 LibraryType libraryType = getLibraryType();
 
-                return mode == LibraryLoadingMode.UNPACKAGED
-                        ? loadUnpackaged(interfaceClass, libraryType)
-                        : loadPackaged(interfaceClass, libraryType);
+                if (mode == LibraryLoadingMode.UNPACKAGED) {
+                    loadUnpackaged(libraryType);
+                } else {
+                    loadPackaged(libraryType);
+                }
             } catch (Exception e) {
                 throw new AudioEngineException("Failed to load audio library", e);
             }
@@ -210,19 +206,14 @@ public class FmodLibraryLoader {
      * @param libraryType The library type (standard or logging)
      * @return The loaded library instance
      */
-    private <T extends Library> T loadUnpackaged(
-            @NonNull Class<T> interfaceClass, @NonNull LibraryType libraryType) {
-        var customResult = tryCustomPath(interfaceClass, libraryType);
-        if (customResult != null) {
-            return customResult;
-        }
-        return loadFromDevelopmentPath(interfaceClass, libraryType);
+    private void loadUnpackaged(@NonNull LibraryType libraryType) {
+        if (tryCustomPath(libraryType)) return;
+        loadFromDevelopmentPath(libraryType);
     }
 
-    private <T extends Library> T tryCustomPath(
-            @NonNull Class<T> interfaceClass, @NonNull LibraryType libraryType) {
+    private boolean tryCustomPath(@NonNull LibraryType libraryType) {
         var customPath = getLibraryPath();
-        if (customPath == null) return null;
+        if (customPath == null) return false;
 
         var customFile = new File(customPath);
         if (customFile.exists()) {
@@ -233,24 +224,25 @@ public class FmodLibraryLoader {
                     logger.warn(
                             "Custom directory provided but library not found: {}",
                             resolved.getAbsolutePath());
-                    return null;
+                    return false;
                 }
                 logger.debug(
                         "Loading audio library from custom directory: {} -> {}",
                         customPath,
                         resolved.getAbsolutePath());
-                return loadLibraryFromAbsolutePath(resolved.getAbsolutePath(), interfaceClass);
+                System.load(resolved.getAbsolutePath());
+                return true;
             }
             logger.debug("Loading audio library from custom path: {}", customPath);
-            return loadLibraryFromAbsolutePath(customFile.getAbsolutePath(), interfaceClass);
+            System.load(customFile.getAbsolutePath());
+            return true;
         } else {
             logger.warn("Custom audio library path not found: {}", customPath);
-            return null;
+            return false;
         }
     }
 
-    private <T extends Library> T loadFromDevelopmentPath(
-            @NonNull Class<T> interfaceClass, @NonNull LibraryType libraryType) {
+    private void loadFromDevelopmentPath(@NonNull LibraryType libraryType) {
         var projectDir = System.getProperty("user.dir");
         var relativePath = getLibraryDevelopmentPath(libraryType);
         var fullPath = projectDir + "/" + relativePath;
@@ -268,7 +260,7 @@ public class FmodLibraryLoader {
         }
 
         logger.debug("Loading audio library from unpackaged path: {}", fullPath);
-        return loadLibraryFromAbsolutePath(libraryFile.getAbsolutePath(), interfaceClass);
+        System.load(libraryFile.getAbsolutePath());
     }
 
     /**
@@ -278,32 +270,11 @@ public class FmodLibraryLoader {
      * @param libraryType The library type (standard or logging)
      * @return The loaded library instance
      */
-    private <T extends Library> T loadPackaged(
-            @NonNull Class<T> interfaceClass, @NonNull LibraryType libraryType) {
+    private void loadPackaged(@NonNull LibraryType libraryType) {
         // For packaged mode, we use the system library name without path
-        // The exact library depends on the platform and type
         String libraryName = getSystemLibraryName(libraryType);
-
         logger.debug("Loading audio library from system library path: {}", libraryName);
-        return Native.load(libraryName, interfaceClass);
-    }
-
-    /**
-     * Loads a native library from an absolute file path using modern JNA API.
-     *
-     * @param absolutePath The absolute path to the library file
-     * @param interfaceClass The JNA interface class to load
-     * @return The loaded library instance
-     */
-    private <T extends Library> T loadLibraryFromAbsolutePath(
-            @NonNull String absolutePath, @NonNull Class<T> interfaceClass) {
-        var file = new File(absolutePath);
-        var fileName = file.getName();
-
-        var libraryName = fileName.replaceAll("^lib", "").replaceAll("\\.(so|dll|dylib)$", "");
-
-        NativeLibrary.addSearchPath(libraryName, file.getParent());
-        return Native.load(libraryName, interfaceClass);
+        System.loadLibrary(libraryName);
     }
 
     /**

@@ -2,9 +2,10 @@ package audio.fmod;
 
 import annotations.ThreadSafe;
 import audio.exceptions.AudioEngineException;
-import com.sun.jna.Pointer;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.PointerByReference;
+import audio.fmod.panama.FmodCore;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 class FmodSystemManager {
 
     // Core FMOD resources
-    private volatile FmodLibrary fmod;
-    private volatile Pointer system;
+    private volatile MemorySegment system;
     private volatile boolean initialized = false;
 
     // Thread safety
@@ -45,26 +45,27 @@ class FmodSystemManager {
             if (initialized) {
                 throw new AudioEngineException("FMOD system already initialized");
             }
-
-            // Load FMOD library using the loader
-            fmod = libraryLoader.loadAudioLibrary(FmodLibrary.class);
+            // Load native FMOD library for Panama lookup
+            libraryLoader.loadNativeLibrary();
 
             // Create FMOD system
-            PointerByReference systemRef = new PointerByReference();
-            int result = fmod.FMOD_System_Create(systemRef, FmodConstants.FMOD_VERSION);
-            if (result != FmodConstants.FMOD_OK) {
-                throw FmodError.toEngineException(result, "create FMOD system");
+            try (Arena arena = Arena.ofConfined()) {
+                MemorySegment systemRef = arena.allocate(ValueLayout.ADDRESS);
+                int result = FmodCore.FMOD_System_Create(systemRef, FmodConstants.FMOD_VERSION);
+                if (result != FmodConstants.FMOD_OK) {
+                    throw FmodError.toEngineException(result, "create FMOD system");
+                }
+                system = systemRef.get(ValueLayout.ADDRESS, 0);
             }
-            system = systemRef.getValue();
 
             // Configure for playback
-            configureForPlayback(fmod, system);
+            configureForPlayback(system);
 
             // Initialize FMOD system
             int maxChannels = 2; // Stereo playback
             int initFlags = FmodConstants.FMOD_INIT_NORMAL;
-
-            result = fmod.FMOD_System_Init(system, maxChannels, initFlags, null);
+            int result =
+                    FmodCore.FMOD_System_Init(system, maxChannels, initFlags, MemorySegment.NULL);
             if (result != FmodConstants.FMOD_OK) {
                 throw FmodError.toEngineException(result, "initialize FMOD system");
             }
@@ -84,10 +85,10 @@ class FmodSystemManager {
      * @param sys The FMOD system pointer
      * @throws AudioEngineException if configuration fails
      */
-    private void configureForPlayback(@NonNull FmodLibrary fmodLib, @NonNull Pointer sys) {
+    private void configureForPlayback(@NonNull MemorySegment sys) {
         // Low latency configuration for playback
         // Smaller buffer for lower latency (256 samples, 4 buffers)
-        int result = fmodLib.FMOD_System_SetDSPBufferSize(sys, 256, 4);
+        int result = FmodCore.FMOD_System_SetDSPBufferSize(sys, 256, 4);
         if (result != FmodConstants.FMOD_OK) {
             log.warn(
                     "Could not set DSP buffer size for low latency: {}",
@@ -96,7 +97,7 @@ class FmodSystemManager {
 
         // Set software format - mono for audio annotation app
         result =
-                fmodLib.FMOD_System_SetSoftwareFormat(
+                FmodCore.FMOD_System_SetSoftwareFormat(
                         sys, 48000, FmodConstants.FMOD_SPEAKERMODE_MONO, 0);
         if (result != FmodConstants.FMOD_OK) {
             log.warn("Could not set software format: {}", FmodError.describe(result));
@@ -117,11 +118,11 @@ class FmodSystemManager {
      * @throws AudioEngineException if update fails
      */
     void update() {
-        if (!initialized || fmod == null || system == null) {
+        if (!initialized || system == null) {
             return;
         }
 
-        fmod.FMOD_System_Update(system);
+        FmodCore.FMOD_System_Update(system);
     }
 
     /**
@@ -135,15 +136,14 @@ class FmodSystemManager {
                 return; // Already shut down
             }
 
-            if (system != null && fmod != null) {
-                int result = fmod.FMOD_System_Release(system);
+            if (system != null) {
+                int result = FmodCore.FMOD_System_Release(system);
                 if (result != FmodConstants.FMOD_OK) {
                     log.warn("Error releasing FMOD system: {}", FmodError.describe(result));
                 }
             }
 
             system = null;
-            fmod = null;
             initialized = false;
 
         } finally {
@@ -165,16 +165,12 @@ class FmodSystemManager {
      *
      * @return The FMOD library, or null if not initialized
      */
-    FmodLibrary getFmodLibrary() {
-        return fmod;
-    }
-
     /**
      * Get the FMOD system pointer.
      *
      * @return The system pointer, or null if not initialized
      */
-    Pointer getSystem() {
+    MemorySegment getSystem() {
         return system;
     }
 
@@ -184,18 +180,23 @@ class FmodSystemManager {
      * @return Version string, or empty if not initialized
      */
     String getVersionInfo() {
-        if (!initialized || fmod == null || system == null) {
+        if (!initialized || system == null) {
             return "";
         }
 
-        IntByReference version = new IntByReference();
-        IntByReference buildnumber = new IntByReference();
-        int result = fmod.FMOD_System_GetVersion(system, version, buildnumber);
-        if (result == FmodConstants.FMOD_OK) {
-            int v = version.getValue();
-            return String.format(
-                    "%d.%d.%d (build %d)",
-                    (v >> 16) & 0xFFFF, (v >> 8) & 0xFF, v & 0xFF, buildnumber.getValue());
+        try (Arena arena = Arena.ofConfined()) {
+            var version = arena.allocate(ValueLayout.JAVA_INT);
+            var buildnumber = arena.allocate(ValueLayout.JAVA_INT);
+            int result = FmodCore.FMOD_System_GetVersion(system, version, buildnumber);
+            if (result == FmodConstants.FMOD_OK) {
+                int v = version.get(ValueLayout.JAVA_INT, 0);
+                return String.format(
+                        "%d.%d.%d (build %d)",
+                        (v >> 16) & 0xFFFF,
+                        (v >> 8) & 0xFF,
+                        v & 0xFF,
+                        buildnumber.get(ValueLayout.JAVA_INT, 0));
+            }
         }
         return "";
     }
@@ -206,16 +207,20 @@ class FmodSystemManager {
      * @return Buffer configuration string, or empty if not initialized
      */
     String getBufferInfo() {
-        if (!initialized || fmod == null || system == null) {
+        if (!initialized || system == null) {
             return "";
         }
 
-        IntByReference bufferLength = new IntByReference();
-        IntByReference numBuffers = new IntByReference();
-        int result = fmod.FMOD_System_GetDSPBufferSize(system, bufferLength, numBuffers);
-        if (result == FmodConstants.FMOD_OK) {
-            return String.format(
-                    "%d samples x %d buffers", bufferLength.getValue(), numBuffers.getValue());
+        try (Arena arena = Arena.ofConfined()) {
+            var bufferLength = arena.allocate(ValueLayout.JAVA_INT);
+            var numBuffers = arena.allocate(ValueLayout.JAVA_INT);
+            int result = FmodCore.FMOD_System_GetDSPBufferSize(system, bufferLength, numBuffers);
+            if (result == FmodConstants.FMOD_OK) {
+                return String.format(
+                        "%d samples x %d buffers",
+                        bufferLength.get(ValueLayout.JAVA_INT, 0),
+                        numBuffers.get(ValueLayout.JAVA_INT, 0));
+            }
         }
         return "";
     }
@@ -226,18 +231,23 @@ class FmodSystemManager {
      * @return Format configuration string, or empty if not initialized
      */
     String getFormatInfo() {
-        if (!initialized || fmod == null || system == null) {
+        if (!initialized || system == null) {
             return "";
         }
 
-        IntByReference sampleRate = new IntByReference();
-        IntByReference speakerMode = new IntByReference();
-        IntByReference numRawSpeakers = new IntByReference();
-        int result =
-                fmod.FMOD_System_GetSoftwareFormat(system, sampleRate, speakerMode, numRawSpeakers);
-        if (result == FmodConstants.FMOD_OK) {
-            return String.format(
-                    "%d Hz, speaker mode: %d", sampleRate.getValue(), speakerMode.getValue());
+        try (Arena arena = Arena.ofConfined()) {
+            var sampleRate = arena.allocate(ValueLayout.JAVA_INT);
+            var speakerMode = arena.allocate(ValueLayout.JAVA_INT);
+            var numRawSpeakers = arena.allocate(ValueLayout.JAVA_INT);
+            int result =
+                    FmodCore.FMOD_System_GetSoftwareFormat(
+                            system, sampleRate, speakerMode, numRawSpeakers);
+            if (result == FmodConstants.FMOD_OK) {
+                return String.format(
+                        "%d Hz, speaker mode: %d",
+                        sampleRate.get(ValueLayout.JAVA_INT, 0),
+                        speakerMode.get(ValueLayout.JAVA_INT, 0));
+            }
         }
         return "";
     }

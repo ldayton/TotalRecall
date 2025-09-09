@@ -5,9 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import audio.AudioHandle;
 import audio.AudioMetadata;
 import audio.exceptions.AudioLoadException;
-import com.sun.jna.Pointer;
-import com.sun.jna.ptr.PointerByReference;
 import java.io.File;
+import java.lang.foreign.MemorySegment;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -35,8 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FmodAudioLoadingManagerTest {
 
-    private FmodLibrary fmod;
-    private Pointer system;
+    private MemorySegment system;
     private FmodSystemStateManager stateManager;
     private FmodHandleLifecycleManager lifecycleManager;
     private FmodAudioLoadingManager loadingManager;
@@ -49,21 +47,14 @@ class FmodAudioLoadingManagerTest {
 
     @BeforeAll
     void setUpFmod() {
-        // Load FMOD library
-        FmodLibraryLoader loader =
-                new FmodLibraryLoader(
-                        new FmodProperties("unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH));
-        fmod = loader.loadAudioLibrary(FmodLibrary.class);
-
-        // Create FMOD system
-        PointerByReference systemRef = new PointerByReference();
-        int result = fmod.FMOD_System_Create(systemRef, FmodConstants.FMOD_VERSION);
-        assertEquals(FmodConstants.FMOD_OK, result, "Failed to create FMOD system");
-        system = systemRef.getValue();
-
-        // Initialize FMOD system
-        result = fmod.FMOD_System_Init(system, 32, FmodConstants.FMOD_INIT_NORMAL, null);
-        assertEquals(FmodConstants.FMOD_OK, result, "Failed to initialize FMOD system");
+        // Initialize system via high-level manager
+        FmodSystemManager sm =
+                new FmodSystemManager(
+                        new FmodLibraryLoader(
+                                new FmodProperties(
+                                        "unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH)));
+        sm.initialize();
+        system = sm.getSystem();
 
         // Create state manager and set to INITIALIZED
         stateManager = new FmodSystemStateManager();
@@ -84,14 +75,12 @@ class FmodAudioLoadingManagerTest {
         }
         // Create fresh loading manager for each test
         lifecycleManager = new FmodHandleLifecycleManager();
-        loadingManager = new FmodAudioLoadingManager(fmod, system, stateManager, lifecycleManager);
+        loadingManager = new FmodAudioLoadingManager(system, stateManager, lifecycleManager);
     }
 
     @AfterAll
     void tearDownFmod() {
-        if (system != null && fmod != null) {
-            fmod.FMOD_System_Release(system);
-        }
+        // System released by SystemManager in other tests; nothing to do here
     }
 
     // ========== Core Loading Behavior Tests ==========

@@ -2,7 +2,7 @@ package audio.fmod;
 
 import audio.AudioHandle;
 import audio.PlaybackHandle;
-import com.sun.jna.Pointer;
+import java.lang.foreign.MemorySegment;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
@@ -18,12 +18,12 @@ class FmodPlaybackHandle implements PlaybackHandle {
     @Getter private final long startFrame;
     @Getter private final long endFrame;
 
-    private final Pointer channel;
+    private final MemorySegment channel;
     private final AtomicBoolean active;
 
     FmodPlaybackHandle(
             @NonNull AudioHandle audioHandle,
-            @NonNull Pointer channel,
+            @NonNull MemorySegment channel,
             long startFrame,
             long endFrame) {
         this.id = ID_GENERATOR.incrementAndGet();
@@ -34,7 +34,7 @@ class FmodPlaybackHandle implements PlaybackHandle {
         this.active = new AtomicBoolean(true);
     }
 
-    Pointer getChannel() {
+    MemorySegment getChannel() {
         return channel;
     }
 

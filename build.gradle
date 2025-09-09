@@ -18,7 +18,6 @@ ext {
     ]
     caffeineVersion = '3.2.+'
     googleJavaFormatVersion = '1.24.0'
-    jnaVersion = '5.17.+'
     lombokVersion = '1.18.+'
     maryttsSignalprocVersion = '5.2.+'
 }
@@ -40,7 +39,6 @@ repositories {
 }
 
 dependencies {
-    implementation "net.java.dev.jna:jna:${jnaVersion}"
     implementation("de.dfki.mary:marytts-signalproc:${maryttsSignalprocVersion}") {
         exclude group: 'gov.nist.math', module: 'Jampack'
         exclude group: 'com.twmacinta', module: 'fast-md5'
@@ -82,15 +80,16 @@ checkstyle {
     maxErrors = 0
 }
 
+// Exclude generated Panama bindings from Checkstyle (use glob relative to sources)
 tasks.withType(Checkstyle).configureEach {
-    // Exclude generated Panama bindings from style checks
-    exclude 'src/main/java/audio/fmod/panama/**'
+    exclude '**/audio/fmod/panama/**'
     reports {
         xml.required = false
         html.required = true
         html.outputLocation = layout.buildDirectory.file("reports/checkstyle/${name}.html")
     }
 }
+
 
 // Spring test AOT uses a JavaExec; set system property to ignore newer classfile versions
 tasks.named('processTestAot') {

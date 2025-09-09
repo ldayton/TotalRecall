@@ -2,7 +2,6 @@ package audio.fmod;
 
 import annotations.ThreadSafe;
 import audio.AudioHandle;
-import com.sun.jna.Pointer;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +33,8 @@ class FmodHandleLifecycleManager {
      * @return A new valid audio handle
      */
     @NonNull
-    FmodAudioHandle createHandle(@NonNull Pointer sound, @NonNull String filePath) {
+    FmodAudioHandle createHandle(
+            @NonNull java.lang.foreign.MemorySegment sound, @NonNull String filePath) {
         // Increment generation to invalidate all previous handles
         long generation = currentGeneration.incrementAndGet();
         long id = nextHandleId.getAndIncrement();

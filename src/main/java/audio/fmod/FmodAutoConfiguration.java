@@ -2,15 +2,13 @@ package audio.fmod;
 
 import audio.AudioEngine;
 import audio.SampleReader;
-import com.sun.jna.Pointer;
+import java.lang.foreign.MemorySegment;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
 @EnableConfigurationProperties(FmodProperties.class)
-@ConditionalOnClass(FmodLibrary.class)
 public class FmodAutoConfiguration {
 
     @Bean
@@ -29,15 +27,7 @@ public class FmodAutoConfiguration {
     }
 
     @Bean
-    public FmodLibrary fmodLibrary(FmodSystemManager systemManager) {
-        if (!systemManager.isInitialized()) {
-            systemManager.initialize();
-        }
-        return systemManager.getFmodLibrary();
-    }
-
-    @Bean
-    public Pointer fmodSystemPointer(FmodSystemManager systemManager) {
+    public MemorySegment fmodSystemPointer(FmodSystemManager systemManager) {
         if (!systemManager.isInitialized()) {
             systemManager.initialize();
         }
@@ -51,21 +41,20 @@ public class FmodAutoConfiguration {
 
     @Bean
     public FmodAudioLoadingManager fmodAudioLoadingManager(
-            FmodLibrary fmod,
-            Pointer fmodSystemPointer,
+            MemorySegment fmodSystemPointer,
             FmodSystemStateManager stateManager,
             FmodHandleLifecycleManager lifecycleManager) {
-        return new FmodAudioLoadingManager(fmod, fmodSystemPointer, stateManager, lifecycleManager);
+        return new FmodAudioLoadingManager(fmodSystemPointer, stateManager, lifecycleManager);
     }
 
     @Bean
-    public FmodPlaybackManager fmodPlaybackManager(FmodLibrary fmod, Pointer fmodSystemPointer) {
-        return new FmodPlaybackManager(fmod, fmodSystemPointer);
+    public FmodPlaybackManager fmodPlaybackManager(MemorySegment fmodSystemPointer) {
+        return new FmodPlaybackManager(fmodSystemPointer);
     }
 
     @Bean
-    public FmodListenerManager fmodListenerManager(FmodLibrary fmod, Pointer fmodSystemPointer) {
-        return new FmodListenerManager(fmod, fmodSystemPointer);
+    public FmodListenerManager fmodListenerManager(MemorySegment fmodSystemPointer) {
+        return new FmodListenerManager(fmodSystemPointer);
     }
 
     @Bean

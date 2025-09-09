@@ -42,7 +42,6 @@ class FmodSystemManagerTest {
     @DisplayName("Initial state should be uninitialized")
     void testInitialState() {
         assertFalse(manager.isInitialized());
-        assertNull(manager.getFmodLibrary());
         assertNull(manager.getSystem());
         assertEquals("", manager.getVersionInfo());
         assertEquals("", manager.getBufferInfo());
@@ -54,7 +53,6 @@ class FmodSystemManagerTest {
     void testInitialization() {
         assertDoesNotThrow(() -> manager.initialize());
         assertTrue(manager.isInitialized());
-        assertNotNull(manager.getFmodLibrary());
         assertNotNull(manager.getSystem());
     }
 
@@ -136,7 +134,6 @@ class FmodSystemManagerTest {
         manager.shutdown();
 
         assertFalse(manager.isInitialized());
-        assertNull(manager.getFmodLibrary());
         assertNull(manager.getSystem());
     }
 

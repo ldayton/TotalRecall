@@ -10,8 +10,10 @@ import audio.PlaybackState;
 import audio.exceptions.AudioEngineException;
 import audio.exceptions.AudioLoadException;
 import audio.exceptions.AudioPlaybackException;
-import com.sun.jna.Pointer;
-import com.sun.jna.ptr.IntByReference;
+import audio.fmod.panama.FmodCore;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -31,12 +33,9 @@ public class FmodAudioEngine implements AudioEngine {
     private final FmodSystemStateManager systemStateManager;
     private final FmodHandleLifecycleManager lifecycleManager;
 
-    // Cached references for performance
-    private final FmodLibrary fmod;
-
     // Runtime state
     private FmodPlaybackHandle currentPlayback;
-    private Pointer currentSound;
+    private MemorySegment currentSound;
 
     public FmodAudioEngine(
             @NonNull FmodSystemManager systemManager,
@@ -65,9 +64,6 @@ public class FmodAudioEngine implements AudioEngine {
             if (!systemManager.isInitialized()) {
                 systemManager.initialize();
             }
-
-            // Cache frequently used references
-            this.fmod = systemManager.getFmodLibrary();
 
             if (!systemStateManager.compareAndSetState(
                     FmodSystemStateManager.State.INITIALIZING,
@@ -297,18 +293,25 @@ public class FmodAudioEngine implements AudioEngine {
             if (frame < 0) {
                 throw new AudioPlaybackException("Invalid seek position: " + frame);
             }
-            IntByReference pausedRef = new IntByReference();
-            int result = fmod.FMOD_Channel_GetPaused(fmodPlayback.getChannel(), pausedRef);
-            boolean wasPaused = (result == FmodConstants.FMOD_OK && pausedRef.getValue() != 0);
-            playbackManager.seek(frame);
-            if (!playbackManager.hasActivePlayback()) {
-                fmodPlayback.markInactive();
-                currentPlayback = null;
-                throw new AudioPlaybackException("Channel was stopped, cannot seek");
+            try (Arena arena = Arena.ofConfined()) {
+                var pausedRef = arena.allocate(ValueLayout.JAVA_INT);
+                int result = FmodCore.FMOD_Channel_GetPaused(fmodPlayback.getChannel(), pausedRef);
+                boolean wasPaused =
+                        (result == FmodConstants.FMOD_OK
+                                && pausedRef.get(ValueLayout.JAVA_INT, 0) != 0);
+                playbackManager.seek(frame);
+                if (!playbackManager.hasActivePlayback()) {
+                    fmodPlayback.markInactive();
+                    currentPlayback = null;
+                    throw new AudioPlaybackException("Channel was stopped, cannot seek");
+                }
+                PlaybackState currentState =
+                        wasPaused ? PlaybackState.PAUSED : PlaybackState.PLAYING;
+                listenerManager.notifyStateChanged(
+                        fmodPlayback, PlaybackState.SEEKING, currentState);
+                listenerManager.notifyStateChanged(
+                        fmodPlayback, currentState, PlaybackState.SEEKING);
             }
-            PlaybackState currentState = wasPaused ? PlaybackState.PAUSED : PlaybackState.PLAYING;
-            listenerManager.notifyStateChanged(fmodPlayback, PlaybackState.SEEKING, currentState);
-            listenerManager.notifyStateChanged(fmodPlayback, currentState, PlaybackState.SEEKING);
         } finally {
             operationLock.unlock();
         }
@@ -327,31 +330,35 @@ public class FmodAudioEngine implements AudioEngine {
         if (currentPlayback != fmodPlayback) {
             return PlaybackState.STOPPED;
         }
-        Pointer channel = fmodPlayback.getChannel();
-        IntByReference isPlayingRef = new IntByReference();
-        int result = fmod.FMOD_Channel_IsPlaying(channel, isPlayingRef);
-        if (result == FmodConstants.FMOD_ERR_INVALID_HANDLE
-                || result == FmodConstants.FMOD_ERR_CHANNEL_STOLEN) {
-            fmodPlayback.markInactive();
-            currentPlayback = null;
-            return PlaybackState.STOPPED;
+        MemorySegment channel = fmodPlayback.getChannel();
+        try (Arena arena = Arena.ofConfined()) {
+            var isPlayingRef = arena.allocate(ValueLayout.JAVA_INT);
+            int result = FmodCore.FMOD_Channel_IsPlaying(channel, isPlayingRef);
+            if (result == FmodConstants.FMOD_ERR_INVALID_HANDLE
+                    || result == FmodConstants.FMOD_ERR_CHANNEL_STOLEN) {
+                fmodPlayback.markInactive();
+                currentPlayback = null;
+                return PlaybackState.STOPPED;
+            }
+            if (result != FmodConstants.FMOD_OK) {
+                throw new AudioPlaybackException(
+                        "Failed to check playback state: " + "error code: " + result);
+            }
+            if (isPlayingRef.get(ValueLayout.JAVA_INT, 0) == 0) {
+                fmodPlayback.markInactive();
+                currentPlayback = null;
+                return PlaybackState.STOPPED;
+            }
+            var isPausedRef = arena.allocate(ValueLayout.JAVA_INT);
+            result = FmodCore.FMOD_Channel_GetPaused(channel, isPausedRef);
+            if (result != FmodConstants.FMOD_OK) {
+                throw new AudioPlaybackException(
+                        "Failed to check pause state: " + "error code: " + result);
+            }
+            return isPausedRef.get(ValueLayout.JAVA_INT, 0) != 0
+                    ? PlaybackState.PAUSED
+                    : PlaybackState.PLAYING;
         }
-        if (result != FmodConstants.FMOD_OK) {
-            throw new AudioPlaybackException(
-                    "Failed to check playback state: " + "error code: " + result);
-        }
-        if (isPlayingRef.getValue() == 0) {
-            fmodPlayback.markInactive();
-            currentPlayback = null;
-            return PlaybackState.STOPPED;
-        }
-        IntByReference isPausedRef = new IntByReference();
-        result = fmod.FMOD_Channel_GetPaused(channel, isPausedRef);
-        if (result != FmodConstants.FMOD_OK) {
-            throw new AudioPlaybackException(
-                    "Failed to check pause state: " + "error code: " + result);
-        }
-        return isPausedRef.getValue() != 0 ? PlaybackState.PAUSED : PlaybackState.PLAYING;
     }
 
     @Override
@@ -437,9 +444,9 @@ public class FmodAudioEngine implements AudioEngine {
 
         operationLock.lock();
         try {
-            if (fmod != null && currentPlayback != null) {
+            if (currentPlayback != null) {
                 try {
-                    int result = fmod.FMOD_Channel_Stop(currentPlayback.getChannel());
+                    int result = FmodCore.FMOD_Channel_Stop(currentPlayback.getChannel());
                     if (result != FmodConstants.FMOD_OK
                             && result != FmodConstants.FMOD_ERR_INVALID_HANDLE) {}
                     currentPlayback.markInactive();
@@ -454,9 +461,9 @@ public class FmodAudioEngine implements AudioEngine {
                 } catch (Exception e) {
                 }
             }
-            if (fmod != null && currentSound != null) {
+            if (currentSound != null) {
                 try {
-                    int result = fmod.FMOD_Sound_Release(currentSound);
+                    int result = FmodCore.FMOD_Sound_Release(currentSound);
                     if (result != FmodConstants.FMOD_OK) {}
                 } catch (Exception e) {
                 }
