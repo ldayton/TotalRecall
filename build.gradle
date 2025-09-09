@@ -1,0 +1,123 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'distribution'
+    id 'com.diffplug.spotless' version '7.2.+'
+    id 'com.github.ben-manes.versions' version '0.52.+'
+    id 'org.jetbrains.qodana' version '2025.2.1'
+    id 'checkstyle'
+}
+
+ext {
+    javaVersion = JavaVersion.VERSION_24
+    nativeAccessJvmArgs = [
+        '--enable-native-access=ALL-UNNAMED',
+        '-Dsun.java2d.uiScale.enabled=true',
+        '-Dswing.aatext=true', 
+        '-Dawt.useSystemAAFontSettings=on'
+    ]
+    caffeineVersion = '3.2.+'
+    googleJavaFormatVersion = '1.24.0'
+    guiceVersion = '7.0.+'
+    jnaVersion = '5.17.+'
+    junitJupiterVersion = '5.10.+'
+    junitPlatformLauncherVersion = '1.10.+'
+    logbackVersion = '1.5.+'
+    lombokVersion = '1.18.+'
+    maryttsSignalprocVersion = '5.2.+'
+    slf4jVersion = '2.0.+'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(24)
+    }
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+}
+
+application {
+    mainClass = 'server.Main'
+    applicationDefaultJvmArgs = nativeAccessJvmArgs
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "net.java.dev.jna:jna:${jnaVersion}"
+    implementation("de.dfki.mary:marytts-signalproc:${maryttsSignalprocVersion}") {
+        exclude group: 'gov.nist.math', module: 'Jampack'
+        exclude group: 'com.twmacinta', module: 'fast-md5'
+    }
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    implementation "ch.qos.logback:logback-classic:${logbackVersion}"
+    implementation "com.google.inject:guice:${guiceVersion}"
+    implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+    
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junitPlatformLauncherVersion}"
+    
+}
+
+jar {
+    archiveFileName = "TotalRecall.jar"
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass.get(),
+            'Class-Path': '.',
+            'Built-By': System.getProperty('user.name'),
+            'Implementation-Version': version
+        )
+    }
+    from {
+        configurations.runtimeClasspath
+            .filter { it.isDirectory() || it.name.endsWith('.jar') }
+            .collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat(googleJavaFormatVersion).aosp().reflowLongStrings()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+checkstyle {
+    toolVersion = '10.21.0'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+    sourceSets = [sourceSets.main]
+    showViolations = true
+    maxWarnings = 0
+    maxErrors = 0
+}
+
+tasks.withType(Checkstyle).configureEach {
+    reports {
+        xml.required = false
+        html.required = true
+        html.outputLocation = layout.buildDirectory.file("reports/checkstyle/${name}.html")
+    }
+}
+
+test {
+    jvmArgs = nativeAccessJvmArgs
+    systemProperty 'audio.loading.mode', 'unpackaged'
+    systemProperty 'audio.library.type', 'standard'  // Use non-logging FMOD for tests
+    useJUnitPlatform {}
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        showStandardStreams = true
+    }
+}

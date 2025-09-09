@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+          "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+          "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    
+    <module name="TreeWalker">
+        <!-- Ban wildcard imports -->
+        <module name="AvoidStarImport">
+            <property name="severity" value="error"/>
+        </module>
+        
+        <!-- Ban inline fully qualified names (prefer imports) -->
+        <module name="Regexp">
+            <property name="format" value="^(?!import |package )(?!.*&quot;.*\b(java|javax)\.).*\b(java|javax|com\.sun|org\.(slf4j|junit|mockito))\.\w+\.[A-Z]\w+\b"/>
+            <property name="message" value="Avoid fully qualified class names; use imports instead"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="ignoreComments" value="true"/>
+            <property name="severity" value="error"/>
+        </module>
+    </module>
+</module>
