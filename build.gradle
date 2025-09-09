@@ -65,6 +65,7 @@ bootJar {
 spotless {
     java {
         target 'src/**/*.java'
+        targetExclude 'src/main/java/audio/fmod/panama/**'
         googleJavaFormat(googleJavaFormatVersion).aosp().reflowLongStrings()
         removeUnusedImports()
         trimTrailingWhitespace()
@@ -82,6 +83,8 @@ checkstyle {
 }
 
 tasks.withType(Checkstyle).configureEach {
+    // Exclude generated Panama bindings from style checks
+    exclude 'src/main/java/audio/fmod/panama/**'
     reports {
         xml.required = false
         html.required = true
@@ -106,5 +109,41 @@ test {
     testLogging {
         events "passed", "skipped", "failed", "standardOut", "standardError"
         showStandardStreams = true
+    }
+}
+
+// Generate Panama bindings for FMOD via jextract
+tasks.register('jextractFmod', Exec) {
+    group = 'codegen'
+    description = 'Generate Java Panama bindings for FMOD using jextract'
+    inputs.file('src/main/resources/fmod/macos/fmod.h')
+    inputs.files(fileTree('src/main/resources/fmod/macos') { include '*.h' })
+    outputs.dir('src/main/java/audio/fmod/panama')
+
+    doFirst {
+        def defaultJextract = "${System.getProperty('user.home')}/jextract-22/bin/jextract"
+        def jextractPath = (project.findProperty('jextractBin')
+                ?: System.getenv('JEXTRACT_BIN')
+                ?: defaultJextract).toString()
+
+        def bin = file(jextractPath)
+        if (!bin.exists() || !bin.canExecute()) {
+            throw new GradleException("jextract not found or not executable at: ${jextractPath}. Set -PjextractBin=... or env JEXTRACT_BIN.")
+        }
+        file('src/main/java').mkdirs()
+
+        // Ensure libclang from Command Line Tools is visible on macOS
+        environment 'DYLD_LIBRARY_PATH', [
+            '/Library/Developer/CommandLineTools/usr/lib',
+            System.getenv('DYLD_LIBRARY_PATH')
+        ].findAll { it && it.trim() }.join(File.pathSeparator)
+
+        commandLine jextractPath,
+                '-t', 'audio.fmod.panama',
+                '--header-class-name', 'FmodCore',
+                '-I', 'src/main/resources/fmod/macos',
+                '-l', 'fmod',
+                '--output', file('src/main/java').absolutePath,
+                'src/main/resources/fmod/macos/fmod.h'
     }
 }
