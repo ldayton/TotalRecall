@@ -28,7 +28,9 @@ class FmodSampleReaderTest {
 
     @BeforeEach
     void setUp() {
-        libraryLoader = new FmodLibraryLoader();
+        libraryLoader =
+                new FmodLibraryLoader(
+                        new FmodProperties("unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH));
         reader = new FmodSampleReader(libraryLoader);
     }
 

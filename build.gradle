@@ -1,32 +1,26 @@
 plugins {
     id 'java'
-    id 'application'
-    id 'distribution'
     id 'com.diffplug.spotless' version '7.2.+'
     id 'com.github.ben-manes.versions' version '0.52.+'
-    id 'org.jetbrains.qodana' version '2025.2.1'
     id 'checkstyle'
+    id 'org.springframework.boot' version '3.3.+'
+    id 'io.spring.dependency-management' version '1.1.+'
+    id 'org.graalvm.buildtools.native' version '0.10.+'
 }
+
+group = 'dev.totalrecall'
+version = '0.1.0-SNAPSHOT'
 
 ext {
     javaVersion = JavaVersion.VERSION_24
     nativeAccessJvmArgs = [
         '--enable-native-access=ALL-UNNAMED',
-        '-Dsun.java2d.uiScale.enabled=true',
-        '-Dswing.aatext=true', 
-        '-Dawt.useSystemAAFontSettings=on'
     ]
     caffeineVersion = '3.2.+'
     googleJavaFormatVersion = '1.24.0'
-    gsonVersion = '2.11.+'
-    guiceVersion = '7.0.+'
     jnaVersion = '5.17.+'
-    junitJupiterVersion = '5.10.+'
-    junitPlatformLauncherVersion = '1.10.+'
-    logbackVersion = '1.5.+'
     lombokVersion = '1.18.+'
     maryttsSignalprocVersion = '5.2.+'
-    slf4jVersion = '2.0.+'
 }
 
 java {
@@ -37,9 +31,8 @@ java {
     targetCompatibility = javaVersion
 }
 
-application {
-    mainClass = 'server.Main'
-    applicationDefaultJvmArgs = nativeAccessJvmArgs
+bootRun {
+    jvmArgs = nativeAccessJvmArgs
 }
 
 repositories {
@@ -52,38 +45,21 @@ dependencies {
         exclude group: 'gov.nist.math', module: 'Jampack'
         exclude group: 'com.twmacinta', module: 'fast-md5'
     }
-    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
-    implementation "ch.qos.logback:logback-classic:${logbackVersion}"
-    implementation "com.google.inject:guice:${guiceVersion}"
+    implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter-json")
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
-    implementation "com.google.code.gson:gson:${gsonVersion}"
     
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
     
-    testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
     testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
     testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
-    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junitPlatformLauncherVersion}"
     
 }
 
-jar {
+bootJar {
     archiveFileName = "TotalRecall.jar"
-    manifest {
-        attributes(
-            'Main-Class': application.mainClass.get(),
-            'Class-Path': '.',
-            'Built-By': System.getProperty('user.name'),
-            'Implementation-Version': version
-        )
-    }
-    from {
-        configurations.runtimeClasspath
-            .filter { it.isDirectory() || it.name.endsWith('.jar') }
-            .collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 spotless {
@@ -113,10 +89,19 @@ tasks.withType(Checkstyle).configureEach {
     }
 }
 
+// Spring test AOT uses a JavaExec; set system property to ignore newer classfile versions
+tasks.named('processTestAot') {
+    if (it instanceof JavaExec) {
+        it.systemProperty('spring.classformat.ignore', 'true')
+    }
+}
+
 test {
     jvmArgs = nativeAccessJvmArgs
     systemProperty 'audio.loading.mode', 'unpackaged'
     systemProperty 'audio.library.type', 'standard'  // Use non-logging FMOD for tests
+    // Spring Boot 3.3 ASM may lag latest classfile versions; ignore class format for scanning
+    systemProperty 'spring.classformat.ignore', 'true'
     useJUnitPlatform {}
     testLogging {
         events "passed", "skipped", "failed", "standardOut", "standardError"

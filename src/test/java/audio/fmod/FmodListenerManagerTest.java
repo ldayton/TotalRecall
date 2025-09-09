@@ -53,7 +53,10 @@ class FmodListenerManagerTest {
     void setUp() {
         // Initialize real FMOD components
         stateManager = new FmodSystemStateManager();
-        systemManager = new FmodSystemManager();
+        systemManager =
+                new FmodSystemManager(
+                        new FmodLibraryLoader(
+                                new FmodProperties("unpackaged", "standard", null)));
         lifecycleManager = new FmodHandleLifecycleManager();
 
         systemManager.initialize();

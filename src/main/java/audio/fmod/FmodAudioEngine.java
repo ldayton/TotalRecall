@@ -10,7 +10,6 @@ import audio.PlaybackState;
 import audio.exceptions.AudioEngineException;
 import audio.exceptions.AudioLoadException;
 import audio.exceptions.AudioPlaybackException;
-import com.google.inject.Inject;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -39,7 +38,6 @@ public class FmodAudioEngine implements AudioEngine {
     private FmodPlaybackHandle currentPlayback;
     private Pointer currentSound;
 
-    @Inject
     public FmodAudioEngine(
             @NonNull FmodSystemManager systemManager,
             @NonNull FmodAudioLoadingManager loadingManager,

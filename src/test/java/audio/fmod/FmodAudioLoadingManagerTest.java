@@ -50,7 +50,9 @@ class FmodAudioLoadingManagerTest {
     @BeforeAll
     void setUpFmod() {
         // Load FMOD library
-        FmodLibraryLoader loader = new FmodLibraryLoader();
+        FmodLibraryLoader loader =
+                new FmodLibraryLoader(
+                        new FmodProperties("unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH));
         fmod = loader.loadAudioLibrary(FmodLibrary.class);
 
         // Create FMOD system

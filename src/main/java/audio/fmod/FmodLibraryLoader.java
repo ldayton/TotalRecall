@@ -4,8 +4,6 @@ import audio.exceptions.AudioEngineException;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.NativeLibrary;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import java.io.File;
 import java.util.Arrays;
 import lombok.NonNull;
@@ -39,7 +37,6 @@ import org.slf4j.LoggerFactory;
  *   <li>audio.loading.mode: packaged|unpackaged (default: packaged)
  *   <li>audio.library.type: standard|logging (default: standard)
  *   <li>audio.library.path.{platform}: Custom library paths
- *   <li>audio.hardware.available: Hardware detection override
  * </ul>
  *
  * <h3>Threading & Safety</h3>
@@ -60,7 +57,6 @@ import org.slf4j.LoggerFactory;
  *   <li>Custom paths: Override default locations via configuration
  * </ul>
  */
-@Singleton
 public class FmodLibraryLoader {
 
     /**
@@ -97,18 +93,14 @@ public class FmodLibraryLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(FmodLibraryLoader.class);
 
-    // Configuration keys for audio system settings
-    private static final String LOADING_MODE_KEY = "audio.loading.mode";
-    private static final String LIBRARY_TYPE_KEY = "audio.library.type";
-    private static final String LIBRARY_PATH_MACOS_KEY = "audio.library.path.macos";
-    private static final String AUDIO_HARDWARE_AVAILABLE_KEY = "audio.hardware.available";
-
     // Thread safety for library loading
     private final Object loadLock = new Object();
 
-    @Inject
-    @Singleton
-    public FmodLibraryLoader() {}
+    private final FmodProperties properties;
+
+    public FmodLibraryLoader(FmodProperties properties) {
+        this.properties = properties;
+    }
 
     /**
      * Loads the audio library using configured loading mode and library type.
@@ -132,22 +124,7 @@ public class FmodLibraryLoader {
         }
     }
 
-    /**
-     * Determines whether audio hardware is available for testing.
-     *
-     * <p>This controls audio output mode configuration:
-     *
-     * <ul>
-     *   <li>true (default) - Use hardware audio output
-     *   <li>false - Use silent mode for headless CI testing
-     * </ul>
-     *
-     * @return true if audio hardware is available, false for headless environments
-     */
-    public boolean isAudioHardwareAvailable() {
-        // Default to true - audio hardware is typically available
-        return Boolean.parseBoolean(System.getProperty(AUDIO_HARDWARE_AVAILABLE_KEY, "true"));
-    }
+    // Hardware availability concept removed; audio assumed available.
 
     /**
      * Gets the audio library loading mode.
@@ -155,7 +132,7 @@ public class FmodLibraryLoader {
      * @return the loading mode, defaults to PACKAGED if not configured
      */
     public LibraryLoadingMode getLoadingMode() {
-        String mode = System.getProperty(LOADING_MODE_KEY, "packaged");
+        String mode = properties.loadingMode();
         try {
             return LibraryLoadingMode.valueOf(mode.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -173,7 +150,7 @@ public class FmodLibraryLoader {
      * @return the library type, defaults to STANDARD if not configured
      */
     public LibraryType getLibraryType() {
-        String type = System.getProperty(LIBRARY_TYPE_KEY, "standard");
+        String type = properties.libraryType();
         try {
             return LibraryType.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -193,7 +170,7 @@ public class FmodLibraryLoader {
      */
     public String getLibraryPath() {
         // macOS only
-        return System.getProperty(LIBRARY_PATH_MACOS_KEY);
+        return properties.libraryPathMacos();
     }
 
     /**
@@ -216,7 +193,14 @@ public class FmodLibraryLoader {
      */
     public String getLibraryDevelopmentPath(@NonNull LibraryType libraryType) {
         var filename = getLibraryFilename(libraryType);
-        return "src/main/resources/fmod/macos/" + filename;
+        var base = properties.libraryPathMacos();
+        if (base == null || base.isBlank()) {
+            base = "src/main/resources/fmod/macos"; // fallback for safety; should not happen
+        }
+        if (base.endsWith("/") || base.endsWith("\\")) {
+            return base + filename;
+        }
+        return base + "/" + filename;
     }
 
     /**
@@ -228,19 +212,35 @@ public class FmodLibraryLoader {
      */
     private <T extends Library> T loadUnpackaged(
             @NonNull Class<T> interfaceClass, @NonNull LibraryType libraryType) {
-        var customResult = tryCustomPath(interfaceClass);
+        var customResult = tryCustomPath(interfaceClass, libraryType);
         if (customResult != null) {
             return customResult;
         }
         return loadFromDevelopmentPath(interfaceClass, libraryType);
     }
 
-    private <T extends Library> T tryCustomPath(@NonNull Class<T> interfaceClass) {
+    private <T extends Library> T tryCustomPath(
+            @NonNull Class<T> interfaceClass, @NonNull LibraryType libraryType) {
         var customPath = getLibraryPath();
         if (customPath == null) return null;
 
         var customFile = new File(customPath);
         if (customFile.exists()) {
+            if (customFile.isDirectory()) {
+                var filename = getLibraryFilename(libraryType);
+                var resolved = new File(customFile, filename);
+                if (!resolved.exists()) {
+                    logger.warn(
+                            "Custom directory provided but library not found: {}",
+                            resolved.getAbsolutePath());
+                    return null;
+                }
+                logger.debug(
+                        "Loading audio library from custom directory: {} -> {}",
+                        customPath,
+                        resolved.getAbsolutePath());
+                return loadLibraryFromAbsolutePath(resolved.getAbsolutePath(), interfaceClass);
+            }
             logger.debug("Loading audio library from custom path: {}", customPath);
             return loadLibraryFromAbsolutePath(customFile.getAbsolutePath(), interfaceClass);
         } else {

@@ -1,0 +1,5 @@
+audio:
+  loading:
+    mode: packaged
+  library:
+    type: standard

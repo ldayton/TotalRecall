@@ -2,7 +2,6 @@ package audio.fmod;
 
 import annotations.ThreadSafe;
 import audio.AudioHandle;
-import com.google.inject.Singleton;
 import com.sun.jna.Pointer;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.NonNull;
@@ -17,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
  * <p>Thread-safe: All operations are atomic and thread-safe.
  */
 @ThreadSafe
-@Singleton
 @Slf4j
 class FmodHandleLifecycleManager {
 

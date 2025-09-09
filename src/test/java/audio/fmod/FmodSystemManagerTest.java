@@ -24,7 +24,11 @@ class FmodSystemManagerTest {
 
     @BeforeEach
     void setUp() {
-        manager = new FmodSystemManager();
+        manager =
+                new FmodSystemManager(
+                        new FmodLibraryLoader(
+                                new FmodProperties(
+                                        "unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH)));
     }
 
     @AfterEach

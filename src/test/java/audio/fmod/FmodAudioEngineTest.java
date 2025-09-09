@@ -51,7 +51,11 @@ class FmodAudioEngineTest {
     void setUp() {
         // Create all real components - no mocks
         stateManager = new FmodSystemStateManager();
-        systemManager = new FmodSystemManager();
+        systemManager =
+                new FmodSystemManager(
+                        new FmodLibraryLoader(
+                                new FmodProperties(
+                                        "unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH)));
         lifecycleManager = new FmodHandleLifecycleManager();
 
         // Initialize the system manager first to load FMOD

@@ -1,0 +1,18 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root level is driven by Spring property 'logging.level.root' with WARN default -->
+    <root level="${logging.level.root:-WARN}">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <!-- Package-specific levels can be set via logging.level.<logger>=LEVEL -->
+    <logger name="audio" level="${logging.level.audio:-WARN}" />
+    <logger name="components" level="${logging.level.components:-WARN}" />
+    <logger name="control.Start" level="${logging.level.control.Start:-WARN}" />
+</configuration>
+

@@ -5,7 +5,6 @@ import audio.AudioHandle;
 import audio.AudioMetadata;
 import audio.exceptions.AudioEngineException;
 import audio.exceptions.AudioLoadException;
-import com.google.inject.Inject;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.FloatByReference;
 import com.sun.jna.ptr.IntByReference;
@@ -38,7 +37,6 @@ class FmodAudioLoadingManager {
     // Current loaded audio (single-audio paradigm) - guarded by loadingLock
     private volatile Optional<CurrentAudio> current = Optional.empty();
 
-    @Inject
     FmodAudioLoadingManager(
             @NonNull FmodLibrary fmod,
             @NonNull Pointer system,

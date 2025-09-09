@@ -13,7 +13,9 @@ class FmodLibraryLoaderTest {
     @Test
     @DisplayName("FmodLibraryLoader provides correct FMOD loading mode from configuration")
     void testFmodLoadingModeFromConfiguration() {
-        FmodLibraryLoader loader = new FmodLibraryLoader();
+        FmodLibraryLoader loader =
+                new FmodLibraryLoader(
+                        new FmodProperties("unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH));
 
         // Test that FmodLibraryLoader correctly reads configuration
         LibraryLoadingMode mode = loader.getLoadingMode();
@@ -28,7 +30,9 @@ class FmodLibraryLoaderTest {
     @Test
     @DisplayName("FmodLibraryLoader provides correct FMOD library type from configuration")
     void testLibraryTypeFromConfiguration() {
-        FmodLibraryLoader loader = new FmodLibraryLoader();
+        FmodLibraryLoader loader =
+                new FmodLibraryLoader(
+                        new FmodProperties("unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH));
 
         // Test that FmodLibraryLoader correctly reads configuration
         LibraryType type = loader.getLibraryType();
@@ -40,21 +44,5 @@ class FmodLibraryLoaderTest {
                 "FmodLibraryLoader should return STANDARD in test environment");
     }
 
-    @Test
-    @DisplayName("FmodLibraryLoader correctly detects audio hardware availability")
-    void testAudioHardwareAvailability() {
-        FmodLibraryLoader loader = new FmodLibraryLoader();
-
-        // Test that FmodLibraryLoader correctly reads configuration
-        boolean available = loader.isAudioHardwareAvailable();
-
-        boolean expected =
-                Boolean.parseBoolean(System.getProperty("audio.hardware.available", "true"));
-
-        assertEquals(
-                expected,
-                available,
-                "FmodLibraryLoader should return the configured audio hardware availability"
-                        + " value");
-    }
+    // Hardware availability concept removed; no test needed.
 }

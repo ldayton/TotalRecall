@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 /** Tests for FMOD configuration and cross-platform support in Environment and AppConfig. */
 class FmodConfigurationTest {
 
-    private final FmodLibraryLoader audioManager = new FmodLibraryLoader();
+    private final FmodLibraryLoader audioManager =
+            new FmodLibraryLoader(
+                    new FmodProperties("unpackaged", "standard", FmodDefaults.MACOS_LIB_PATH));
 
     @Test
     @DisplayName("FmodLibraryLoader provides correct FMOD library filenames for each platform")

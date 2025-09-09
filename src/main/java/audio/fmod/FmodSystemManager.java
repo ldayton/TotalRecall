@@ -28,9 +28,9 @@ class FmodSystemManager {
     // Library loader
     private final FmodLibraryLoader libraryLoader;
 
-    /** Creates a new FMOD system manager. */
-    FmodSystemManager() {
-        this.libraryLoader = new FmodLibraryLoader();
+    /** Creates a new FMOD system manager with injected library loader. */
+    FmodSystemManager(FmodLibraryLoader libraryLoader) {
+        this.libraryLoader = libraryLoader;
     }
 
     /**
