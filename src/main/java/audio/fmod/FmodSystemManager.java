@@ -2,13 +2,11 @@ package audio.fmod;
 
 import audio.exceptions.AudioEngineException;
 import audio.fmod.panama.FmodCore;
+import com.google.errorprone.annotations.ThreadSafe;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.concurrent.locks.ReentrantLock;
-
-import com.google.errorprone.annotations.ThreadSafe;
-
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 

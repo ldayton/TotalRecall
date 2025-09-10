@@ -1,12 +1,11 @@
 package playback;
 
+import com.google.errorprone.annotations.ThreadSafe;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import com.google.errorprone.annotations.ThreadSafe;
 
 /**
  * State machine for audio session transitions. This class ensures that all session state changes

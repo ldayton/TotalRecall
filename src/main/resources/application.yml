@@ -3,6 +3,3 @@ audio:
     mode: packaged
   library:
     type: standard
-spring:
-  main:
-    banner-mode: off

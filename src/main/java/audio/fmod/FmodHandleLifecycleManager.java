@@ -1,10 +1,8 @@
 package audio.fmod;
 
 import audio.AudioHandle;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.google.errorprone.annotations.ThreadSafe;
-
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 

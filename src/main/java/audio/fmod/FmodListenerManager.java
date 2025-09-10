@@ -4,6 +4,7 @@ import audio.PlaybackHandle;
 import audio.PlaybackListener;
 import audio.PlaybackState;
 import audio.fmod.panama.FmodCore;
+import com.google.errorprone.annotations.ThreadSafe;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
@@ -13,9 +14,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.google.errorprone.annotations.ThreadSafe;
-
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 

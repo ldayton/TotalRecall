@@ -2,21 +2,26 @@ package server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import audio.*;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import playback.AudioPlaybackService;
 import playback.AudioPlaybackStateMachine;
 import server.rpc.ClientGateway;
-import audio.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import server.rpc.JsonRpcService;
 import server.rpc.dto.Pong;
 
-@SpringBootTest(classes = {TotalRecallApplication.class, server.rpc.JsonRpcService.class, server.JsonRpcServiceTest.StubsConfig.class})
+@SpringBootTest(
+        classes = {
+            TotalRecallApplication.class,
+            server.rpc.JsonRpcService.class,
+            server.JsonRpcServiceTest.StubsConfig.class
+        })
 class JsonRpcServiceTest {
 
     @Autowired private JsonRpcService service;
@@ -47,7 +52,8 @@ class JsonRpcServiceTest {
                 AudioPlaybackStateMachine sm,
                 AudioEngine engine,
                 ClientGateway gw,
-                @org.springframework.beans.factory.annotation.Qualifier("edt") java.util.concurrent.ExecutorService edt) {
+                @org.springframework.beans.factory.annotation.Qualifier("edt")
+                        java.util.concurrent.ExecutorService edt) {
             return new AudioPlaybackService(sm, engine, gw, edt);
         }
 
@@ -55,37 +61,68 @@ class JsonRpcServiceTest {
         AudioEngine audioEngine() {
             return new AudioEngine() {
                 @Override
-                public AudioHandle loadAudio(String filePath) { return null; }
+                public AudioHandle loadAudio(String filePath) {
+                    return null;
+                }
+
                 @Override
-                public PlaybackHandle play(AudioHandle audio) { return null; }
+                public PlaybackHandle play(AudioHandle audio) {
+                    return null;
+                }
+
                 @Override
-                public PlaybackHandle play(AudioHandle audio, long startFrame, long endFrame) { return null; }
+                public PlaybackHandle play(AudioHandle audio, long startFrame, long endFrame) {
+                    return null;
+                }
+
                 @Override
                 public void pause(PlaybackHandle playback) {}
+
                 @Override
                 public void resume(PlaybackHandle playback) {}
+
                 @Override
                 public void stop(PlaybackHandle playback) {}
+
                 @Override
                 public void seek(PlaybackHandle playback, long frame) {}
+
                 @Override
-                public PlaybackState getState(PlaybackHandle playback) { return PlaybackState.STOPPED; }
+                public PlaybackState getState(PlaybackHandle playback) {
+                    return PlaybackState.STOPPED;
+                }
+
                 @Override
-                public long getPosition(PlaybackHandle playback) { return 0; }
+                public long getPosition(PlaybackHandle playback) {
+                    return 0;
+                }
+
                 @Override
-                public boolean isPlaying(PlaybackHandle playback) { return false; }
+                public boolean isPlaying(PlaybackHandle playback) {
+                    return false;
+                }
+
                 @Override
-                public boolean isPaused(PlaybackHandle playback) { return false; }
+                public boolean isPaused(PlaybackHandle playback) {
+                    return false;
+                }
+
                 @Override
-                public boolean isStopped(PlaybackHandle playback) { return true; }
+                public boolean isStopped(PlaybackHandle playback) {
+                    return true;
+                }
+
                 @Override
                 public AudioMetadata getMetadata(AudioHandle audio) {
                     return new AudioMetadata(44100, 2, 16, "unknown", 0L, 0.0);
                 }
+
                 @Override
                 public void addPlaybackListener(PlaybackListener listener) {}
+
                 @Override
                 public void removePlaybackListener(PlaybackListener listener) {}
+
                 @Override
                 public void close() {}
             };

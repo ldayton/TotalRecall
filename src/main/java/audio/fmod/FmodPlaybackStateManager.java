@@ -2,10 +2,8 @@ package audio.fmod;
 
 import audio.PlaybackState;
 import audio.exceptions.AudioPlaybackException;
-import java.util.concurrent.locks.ReentrantLock;
-
 import com.google.errorprone.annotations.ThreadSafe;
-
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 
 /**

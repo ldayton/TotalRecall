@@ -12,7 +12,8 @@ group = 'dev.totalrecall'
 version = '0.1.0-SNAPSHOT'
 
 ext {
-    javaVersion = JavaVersion.VERSION_24
+    javaVersion = 24
+    javaTargetVersion = 23
     nativeAccessJvmArgs = [
         '--enable-native-access=ALL-UNNAMED',
     ]
@@ -25,14 +26,17 @@ ext {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(24)
+        languageVersion = JavaLanguageVersion.of(javaVersion)
     }
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
+    sourceCompatibility = JavaLanguageVersion.of(javaTargetVersion)
+    targetCompatibility = JavaLanguageVersion.of(javaTargetVersion)
 }
 
 bootRun {
-    jvmArgs = nativeAccessJvmArgs
+    jvmArgs = nativeAccessJvmArgs + [
+        '-Djava.library.path=' + file('src/main/resources/fmod/macos').absolutePath,
+        '-Daudio.loading.mode=unpackaged'
+    ]
 }
 
 springBoot {
@@ -131,7 +135,7 @@ graalvmNative {
             buildArgs.add('--no-fallback')
             resources.autodetect()
             javaLauncher = javaToolchains.launcherFor {
-                languageVersion = JavaLanguageVersion.of(24)
+                languageVersion = JavaLanguageVersion.of(javaVersion)
             }
         }
     }

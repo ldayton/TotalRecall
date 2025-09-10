@@ -4,8 +4,13 @@ import audio.AudioEngine;
 import audio.AudioHandle;
 import audio.PlaybackHandle;
 import audio.PlaybackListener;
+import java.io.File;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
 import server.rpc.ClientGateway;
 import server.rpc.dto.CloseAudio;
 import server.rpc.dto.LoadAudio;
@@ -16,11 +21,6 @@ import server.rpc.dto.SeekBy;
 import server.rpc.dto.SeekTo;
 import server.rpc.dto.SessionStateChanged;
 import server.rpc.dto.Stop;
-import java.io.File;
-import java.util.Optional;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 /**
  * Manages the current audio session: tracks state transitions, delegates to the audio engine, and
@@ -342,9 +342,7 @@ public class AudioPlaybackService implements PlaybackListener {
                     currentPositionFrames = 0; // Reset position
                     clientGateway.sessionStateChanged(
                             new SessionStateChanged(
-                                    prevState,
-                                    AudioPlaybackStateMachine.State.READY,
-                                    "completed"));
+                                    prevState, AudioPlaybackStateMachine.State.READY, "completed"));
                     log.debug("Playback completed");
                 });
     }
@@ -427,9 +425,7 @@ public class AudioPlaybackService implements PlaybackListener {
                 stateManager.transitionToReady();
                 clientGateway.sessionStateChanged(
                         new SessionStateChanged(
-                                prevState,
-                                AudioPlaybackStateMachine.State.READY,
-                                "stopped"));
+                                prevState, AudioPlaybackStateMachine.State.READY, "stopped"));
                 log.debug("Playback stopped");
             }
         }

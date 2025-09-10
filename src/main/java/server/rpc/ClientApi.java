@@ -8,4 +8,3 @@ public interface ClientApi {
     @JsonNotification("session/stateChanged")
     void sessionStateChanged(SessionStateChanged payload);
 }
-

@@ -1,8 +1,7 @@
 package server.rpc;
 
-import org.springframework.stereotype.Component;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import server.rpc.dto.SessionStateChanged;
 
 @Component
@@ -28,4 +27,3 @@ public class ClientGateway {
         }
     }
 }
-
