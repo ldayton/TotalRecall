@@ -4,10 +4,10 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Import;
 
-@SpringBootApplication(
-        scanBasePackages = {"server", "audio"},
-        proxyBeanMethods = false)
+@SpringBootApplication(scanBasePackages = {"server", "audio"}, proxyBeanMethods = false)
+@Import(PingPongService.class)
 public class TotalRecallApplication {
     public static void main(String[] args) throws Exception {
         var ctx = SpringApplication.run(TotalRecallApplication.class, args);
