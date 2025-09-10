@@ -1,25 +1,23 @@
 package server;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Import;
 
-@SpringBootApplication(scanBasePackages = {"server", "audio"}, proxyBeanMethods = false)
-@Import(PingPongService.class)
+@SpringBootApplication(scanBasePackages = {"server", "audio", "playback"}, proxyBeanMethods = false)
 public class TotalRecallApplication {
+
     public static void main(String[] args) throws Exception {
         var ctx = SpringApplication.run(TotalRecallApplication.class, args);
-        var pingPongService = ctx.getBean(PingPongService.class);
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
-                String response = pingPongService.process(line);
-                System.out.println(response);
-                System.out.flush();
-            }
-        }
+        var rpc = ctx.getBean(server.rpc.JsonRpcService.class);
+        Launcher<server.rpc.ClientApi> launcher = new Launcher.Builder<server.rpc.ClientApi>()
+                .setLocalService(rpc)
+                .setRemoteInterface(server.rpc.ClientApi.class)
+                .setInput(System.in)
+                .setOutput(System.out)
+                .create();
+        var client = launcher.getRemoteProxy();
+        ctx.getBean(server.rpc.ClientGateway.class).setClient(client);
+        launcher.startListening().get();
     }
 }

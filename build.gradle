@@ -20,6 +20,7 @@ ext {
     googleJavaFormatVersion = '1.24.0'
     lombokVersion = '1.18.+'
     maryttsSignalprocVersion = '5.2.+'
+    lsp4jJsonRpcVersion = '0.24.0'
 }
 
 java {
@@ -48,8 +49,8 @@ dependencies {
         exclude group: 'com.twmacinta', module: 'fast-md5'
     }
     implementation("org.springframework.boot:spring-boot-starter")
-    implementation("org.springframework.boot:spring-boot-starter-json")
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
+    implementation "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:${lsp4jJsonRpcVersion}"
     
     compileOnly "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"

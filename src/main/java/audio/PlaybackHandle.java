@@ -1,6 +1,6 @@
 package audio;
 
-import annotations.ThreadSafe;
+import com.google.errorprone.annotations.ThreadSafe;
 
 /** Handle to active playback. Keeps audio in cache while playing. */
 @ThreadSafe

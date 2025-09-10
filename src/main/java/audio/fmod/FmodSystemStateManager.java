@@ -1,10 +1,12 @@
 package audio.fmod;
 
-import annotations.ThreadSafe;
 import audio.exceptions.AudioEngineException;
 import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+
+import com.google.errorprone.annotations.ThreadSafe;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**

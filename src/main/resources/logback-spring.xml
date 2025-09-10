@@ -1,5 +1,6 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
@@ -15,4 +16,3 @@
     <logger name="components" level="${logging.level.components:-WARN}" />
     <logger name="control.Start" level="${logging.level.control.Start:-WARN}" />
 </configuration>
-

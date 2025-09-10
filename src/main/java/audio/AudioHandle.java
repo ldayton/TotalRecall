@@ -1,6 +1,6 @@
 package audio;
 
-import annotations.ThreadSafe;
+import com.google.errorprone.annotations.ThreadSafe;
 
 /** Immutable handle to audio managed by the engine. */
 @ThreadSafe

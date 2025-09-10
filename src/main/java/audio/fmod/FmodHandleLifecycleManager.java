@@ -1,8 +1,10 @@
 package audio.fmod;
 
-import annotations.ThreadSafe;
 import audio.AudioHandle;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.errorprone.annotations.ThreadSafe;
+
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -11,8 +13,6 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>This class ensures that only handles from the current generation are valid, providing atomic
  * invalidation of all previous handles when a new audio file is loaded.
- *
- * <p>Thread-safe: All operations are atomic and thread-safe.
  */
 @ThreadSafe
 @Slf4j

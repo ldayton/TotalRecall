@@ -1,6 +1,7 @@
 package audio;
 
-import annotations.ThreadSafe;
+import com.google.errorprone.annotations.ThreadSafe;
+
 import audio.exceptions.AudioLoadException;
 import lombok.NonNull;
 

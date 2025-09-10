@@ -1,6 +1,5 @@
 package audio.fmod;
 
-import annotations.ThreadSafe;
 import audio.PlaybackHandle;
 import audio.PlaybackListener;
 import audio.PlaybackState;
@@ -14,6 +13,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.google.errorprone.annotations.ThreadSafe;
+
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 

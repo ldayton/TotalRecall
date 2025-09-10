@@ -1,6 +1,5 @@
 package audio.fmod;
 
-import annotations.ThreadSafe;
 import audio.AudioHandle;
 import audio.exceptions.AudioPlaybackException;
 import audio.fmod.panama.FmodCore;
@@ -9,6 +8,9 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.google.errorprone.annotations.ThreadSafe;
+
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
